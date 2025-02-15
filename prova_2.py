@@ -123,6 +123,6 @@ def rag_pipeline(query_text):
 
 # Example usage
 # Define a query to test the RAG pipeline
-query = "What is a cat?"  # Change the query as needed
+query = "What is a artificial intelligence?"  # Change the query as needed
 response = rag_pipeline(query)
 print("######## Response from LLM ########\n", response)
