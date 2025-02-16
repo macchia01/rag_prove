@@ -13,3 +13,6 @@ Ollama download -> https://ollama.com/download
 
 # prova_4.py
 - https://medium.com/ai-agent-insider/developing-rag-systems-with-deepseek-r1-ollama-66a520bf0b88
+
+# prova_5.py
+- https://github.com/JeffrinE/Locally-Built-RAG-Agent-using-Ollama-and-Langchain
