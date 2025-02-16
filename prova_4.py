@@ -109,7 +109,7 @@ def main():
     chain = rag.setup_rag_chain(vectorstore)
 
     # Eseguire una query di esempio
-    question = "What is the winner of Sanremo 2025? Answer even if it is not provided in the context"
+    question = "Make me a summary of 50 characters."
     response = rag.query(chain, question)
     print(f"Question: {question}\nAnswer: {response}")
 

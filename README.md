@@ -10,3 +10,6 @@ Ollama download -> https://ollama.com/download
 # prova_3.py
 - https://medium.com/@danushidk507/rag-with-llama-using-ollama-a-deep-dive-into-retrieval-augmented-generation-c58b9a1cfcd3
 - FAISS
+
+# prova_4.py
+- https://medium.com/ai-agent-insider/developing-rag-systems-with-deepseek-r1-ollama-66a520bf0b88
