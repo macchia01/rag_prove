@@ -79,7 +79,7 @@ class CPUOptimizedRAGPipeline:
 
     def setup_rag_chain(self):
         if self.vectorstore_type == "faiss":
-            retriever = self.vectorstore.as_retriever(search_type="similarity", search_kwargs={"k": 3})
+            retriever = self.vectorstore.as_retriever(search_type="similarity", search_kwargs={"k": 10})
         else:
             def chromadb_retriever(query_text):
                 results = self.vectorstore.query(query_texts=[query_text], n_results=3)
