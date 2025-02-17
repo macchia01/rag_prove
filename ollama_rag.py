@@ -1,6 +1,7 @@
 import os
 import logging
 import psutil
+import chromadb
 from langchain_community.document_loaders import PyPDFLoader, TextLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
@@ -11,12 +12,13 @@ from langchain.schema.runnable import RunnablePassthrough
 from langchain.schema.output_parser import StrOutputParser
 
 class CPUOptimizedRAGPipeline:
-    def __init__(self, model_name="llama3.2", embedding_model="sentence-transformers/all-MiniLM-L6-v2", docs_folder="documents"):
+    def __init__(self, model_name="llama3.2", embedding_model="sentence-transformers/all-MiniLM-L6-v2", docs_folder="documents", vectorstore_type="faiss"):
         self.setup_logging()
         self.check_memory()
         self.model_name = model_name
         self.embedding_model = embedding_model
         self.docs_folder = docs_folder
+        self.vectorstore_type = vectorstore_type.lower()
 
         # Usa Hugging Face embeddings invece di OllamaEmbeddings
         self.embeddings = HuggingFaceEmbeddings(model_name=self.embedding_model)
@@ -57,15 +59,46 @@ class CPUOptimizedRAGPipeline:
         return all_documents
 
     def create_vectorstore(self):
-        vectorstore = FAISS.from_documents(self.documents, self.embeddings)  # Usa FAISS invece di ChromaDB
+        if self.vectorstore_type == "faiss":
+            faiss_path = "faiss_index"
+            if os.path.exists(faiss_path):
+                vectorstore = FAISS.load_local(faiss_path, self.embeddings, allow_dangerous_deserialization=True)
+            else:
+                vectorstore = FAISS.from_documents(self.documents, self.embeddings)
+                vectorstore.save_local(faiss_path)
+        elif self.vectorstore_type == "chromadb":
+            chroma_client = chromadb.PersistentClient(path="chromadb_index")
+            collection = chroma_client.get_or_create_collection(name="rag_collection")
+            for i, doc in enumerate(self.documents):
+                collection.add(documents=[doc.page_content], ids=[str(i)])
+            vectorstore = collection
+        else:
+            raise ValueError("Unsupported vectorstore. Use 'faiss' or 'chromadb'.")
         return vectorstore
 
     def setup_rag_chain(self):
-        retriever = self.vectorstore.as_retriever(search_type="similarity", search_kwargs={"k": 3})
+        if self.vectorstore_type == "faiss":
+            retriever = self.vectorstore.as_retriever(search_type="similarity", search_kwargs={"k": 3})
+        else:
+            def chromadb_retriever(query_text):
+                results = self.vectorstore.query(query_texts=[query_text], n_results=3)
+                return results["documents"]
+            retriever = chromadb_retriever
         
-        template = """You are an assistant for question-answering tasks.\n\n"""
-        template += """Use the following retrieved context to answer the question:\n\n"""
-        template += """Context: {context}\n\nQuestion: {question}\nAnswer: """
+        template = """
+        You are an assistant for question-answering tasks.
+        Use the following pieces of retrieved context to answer the question:
+        If you don't know the answer, then do not answer from your own knowledge.
+        Keep the answer concise.
+        
+        #### Retrieved Context ####
+        {context}
+        
+        #### Question ####
+        {question}
+        
+        #### Answer ####
+        """
         
         prompt = ChatPromptTemplate.from_template(template)
         
@@ -82,7 +115,8 @@ class CPUOptimizedRAGPipeline:
         return self.rag_chain.invoke(question)
 
 if __name__ == "__main__":
-    rag = CPUOptimizedRAGPipeline(docs_folder="documents")
+    vectorstore_choice = input("Choose vectorstore (faiss/chromadb): ").strip().lower()
+    rag = CPUOptimizedRAGPipeline(docs_folder="documents", vectorstore_type=vectorstore_choice)
     
     while True:
         query = input("Enter Question (or type 'exit' to quit): ")
