@@ -6,23 +6,24 @@ from langchain_community.document_loaders import PyPDFLoader, TextLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_ollama import ChatOllama
+from langchain_ollama import OllamaLLM, ChatOllama
 from langchain.prompts import ChatPromptTemplate
 from langchain.schema.runnable import RunnablePassthrough
 from langchain.schema.output_parser import StrOutputParser
 
 class CPUOptimizedRAGPipeline:
-    def __init__(self, model_name="llama3.2", embedding_model="sentence-transformers/all-MiniLM-L6-v2", docs_folder="documents", vectorstore_type="faiss"):
+    def __init__(self, model_name="llama3.2", embedding_model="sentence-transformers/all-MiniLM-L6-v2", docs_folder="documents", vectorstore_type="faiss", use_chat_mode=False):
         self.setup_logging()
         self.check_memory()
         self.model_name = model_name
         self.embedding_model = embedding_model
         self.docs_folder = docs_folder
         self.vectorstore_type = vectorstore_type.lower()
+        self.use_chat_mode = use_chat_mode
 
         # Usa Hugging Face embeddings invece di OllamaEmbeddings
         self.embeddings = HuggingFaceEmbeddings(model_name=self.embedding_model)
-        self.llm = ChatOllama(model=self.model_name)
+        self.llm = ChatOllama(model=self.model_name) if self.use_chat_mode else OllamaLLM(model=self.model_name)
 
         # Caricamento automatico documenti
         self.documents = self.load_documents()
@@ -97,7 +98,7 @@ class CPUOptimizedRAGPipeline:
         #### Question ####
         {question}
         
-        #### Answer ####
+        #### LLM Response ####
         """
         
         prompt = ChatPromptTemplate.from_template(template)
@@ -116,7 +117,8 @@ class CPUOptimizedRAGPipeline:
 
 if __name__ == "__main__":
     vectorstore_choice = input("Choose vectorstore (faiss/chromadb): ").strip().lower()
-    rag = CPUOptimizedRAGPipeline(docs_folder="documents", vectorstore_type=vectorstore_choice)
+    chat_mode_choice = input("Use chat mode? (yes/no): ").strip().lower() == "yes"
+    rag = CPUOptimizedRAGPipeline(docs_folder="documents", vectorstore_type=vectorstore_choice, use_chat_mode=chat_mode_choice)
     
     while True:
         query = input("Enter Question (or type 'exit' to quit): ")
